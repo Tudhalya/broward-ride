@@ -1,0 +1,9 @@
+{
+  "name": "Broward Ride",
+  "short_name": "BCT Ride",
+  "description": "Real-time Broward County Transit tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488"
+}

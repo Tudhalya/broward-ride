@@ -1,0 +1,23 @@
+{
+  "name": "broward-ride",
+  "version": "1.0.0",
+  "description": "Real-time Broward County Transit tracker (unofficial)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:3080 --files 'public' --no-notify --reload-delay 500\""
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "browser-sync": "^3.0.4",
+    "concurrently": "^9.2.1"
+  }
+}
