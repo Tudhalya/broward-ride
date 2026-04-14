@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s \"https://myride2.broward.org/TransitAPICore/Schedules/GetNextSchedule?Route=BCT109_North&stop=6250\")",
+      "Bash(curl -s \"https://myride2.broward.org/TransitAPICore/VehiclePosition/GetPositionsForRoute?route_direction_key=BCT109_North\")",
+      "Bash(curl -s \"https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North\")",
+      "Bash(curl -sv 'https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/17.0 Mobile/15E148 Safari/604.1' -H 'Accept: application/json')",
+      "Bash(curl -s \"https://myride2.broward.org/TransitAPICore/\" -H \"User-Agent: BCT-MyRide/2.0\")",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/VehiclePosition/GetPositionsForRoute?route_direction_key=BCT109_North' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/Schedules/GetNextSchedule?Route=BCT109_North&stop=6250' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(curl -s https://myride2.broward.org/TransitAPICore/Routes/GetRoutes -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/Stops/GetStopsForRoute?route_direction_key=BCT109_North' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(curl -s https://myride2.broward.org/TransitAPICore/__TRACKED_VAR__ -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 17_0 like Mac OS X\\) AppleWebKit/605.1.15' -H 'Accept: application/json')",
+      "Bash(curl -sv \"https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North\" -H \"Accept: application/json\")",
+      "Bash(curl -sv \"https://myride2.broward.org/TransitAPICore/VehiclePosition/GetPositionsForRoute?route_direction_key=BCT109_North\" -H \"User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 16_0 like Mac OS X\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/16.0 Mobile/15E148 Safari/604.1\" -H \"Accept: application/json\")",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/Schedules/GetNextSchedule?Route=BCT109_North&stop=6250' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 16_0 like Mac OS X\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/16.0 Mobile/15E148 Safari/604.1' -H 'Accept: application/json')",
+      "Bash(curl -s 'https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North' -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 16_0 like Mac OS X\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/16.0 Mobile/15E148 Safari/604.1' -H 'Accept: application/json')",
+      "Bash(npm install:*)",
+      "Bash(node server.js)",
+      "Bash(curl -s \"http://localhost:3000/api/positions?route=BCT109_North\")",
+      "Bash(curl -s \"http://localhost:3000/api/eta?stop=6250&routeDirection=109_North\")",
+      "Bash(curl -s \"http://localhost:3000/api/health\")",
+      "Bash(curl -sv \"http://localhost:3000/api/positions?route=BCT109_North\")",
+      "Bash(pkill -f \"node server.js\")",
+      "Bash(curl -s -X POST https://myride2.broward.org/TransitAPICore/Routes/ -H 'User-Agent: Mozilla/5.0 \\(iPhone; CPU iPhone OS 16_0 like Mac OS X\\) AppleWebKit/605.1.15 \\(KHTML, like Gecko\\) Version/16.0 Mobile/15E148 Safari/604.1' -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"AgencyID\":\"BCT\"}')",
+      "Bash(node -e ':*)",
+      "Bash(curl -s \"http://localhost:3000/api/routes\")",
+      "Bash(node -e \" const d = []; process.stdin.on\\('data', c => d.push\\(c\\)\\); process.stdin.on\\('end', \\(\\) => { const routes = JSON.parse\\(Buffer.concat\\(d\\)\\); console.log\\('Routes returned:', routes.length\\); const r = routes.find\\(r => r.Id === 'BCT109_North'\\); console.log\\('BCT109_North found:', !!r\\); console.log\\('Has Shp:', !!r?.Shp\\); console.log\\('Color:', r?.Color\\); }\\); \" echo \"\")",
+      "Bash(curl -s \"http://localhost:3080/api/routes\")",
+      "Bash(curl -s -D - \"http://localhost:3080/api/routes\" -o /dev/null)",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "Bash(find /c/Users/juyeong.park/source/repos/broward-ride -type f \\\\\\( -name \"*.js\" -o -name \"*.json\" -o -name \"*.yml\" -o -name \"*.yaml\" -o -name \"Dockerfile\" \\\\\\) ! -path \"*/node_modules/*\" -exec grep -l \"TODO\\\\|FIXME\\\\|HACK\\\\|XXX\\\\|BUG\" {} \\\\;)",
+      "Bash(npm audit:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npm --version)",
+      "Bash(grep -r \"apikey\\\\|api_key\\\\|password\\\\|secret\\\\|token\\\\|Bearer\\\\|Authorization\" /c/Users/juyeong.park/source/repos/broward-ride/server.js /c/Users/juyeong.park/source/repos/broward-ride/public/*.js)"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+# Get schedule
+GET https://myride2.broward.org/TransitAPICore/Schedules/GetNextSchedule?Route=BCT109_North&stop=6250
+
+# Get vehicle position
+GET https://myride2.broward.org/TransitAPICore/VehiclePosition/GetPositionsForRoute?route_direction_key=BCT109_North
+
+# Get stop prediction
+GET https://myride2.broward.org/TransitAPICore/ETA/GetStopRoutePredictionsForWeb?stop=6250&routeDirection=109_North
+
+# Get the route
+POST https://myride2.broward.org/TransitAPICore/Routes/
+{
+    "AgencyID": "BCT",
+}

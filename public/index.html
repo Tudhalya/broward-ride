@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0d9488">
+  <link rel="manifest" href="/manifest.json">
+  <title>Broward Ride</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal:        #0d9488;
+      --teal-dark:   #0f766e;
+      --teal-light:  #ccfbf1;
+      --surface:     #ffffff;
+      --bg:          #f0f9f9;
+      --text:        #1a2e2e;
+      --muted:       #6b7280;
+      --border:      #e2e8f0;
+      --red:         #dc2626;
+      --amber:       #d97706;
+      --green:       #16a34a;
+      --radius:      8px;
+    }
+
+    html, body {
+      height: 100%;
+      /* Avoids address-bar shrink on mobile */
+      height: -webkit-fill-available;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Layout shell ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+
+    /* ── Header ── */
+    .header {
+      flex-shrink: 0;
+      background: var(--teal);
+      color: #fff;
+      padding: 0 14px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      z-index: 500;
+    }
+
+    .header-brand { display: flex; align-items: center; gap: 10px; }
+
+    .header-brand svg { width: 26px; height: 26px; fill: #fff; flex-shrink: 0; }
+
+    .app-title { font-size: 17px; font-weight: 700; letter-spacing: -.3px; line-height: 1.2; }
+    .app-sub   { font-size: 11px; opacity: .75; }
+
+    .icon-btn {
+      background: rgba(255,255,255,.2);
+      border: none; color: #fff;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover  { background: rgba(255,255,255,.3); }
+    .icon-btn:active { background: rgba(255,255,255,.15); }
+
+    /* ── Controls panel ── */
+    .controls {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      overflow: hidden;
+      max-height: 80px;
+      transition: max-height .25s ease, padding .25s ease, opacity .25s ease;
+      z-index: 400;
+    }
+
+    .controls.collapsed {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .ctrl-group { display: flex; flex-direction: column; gap: 3px; }
+
+    .ctrl-label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--muted);
+    }
+
+    .ctrl-input, .ctrl-select {
+      height: 34px; padding: 0 8px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      color: var(--text); background: var(--surface);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .ctrl-input:focus, .ctrl-select:focus { border-color: var(--teal); }
+
+    .ctrl-route   { flex: 1; min-width: 0; }
+    #route-select { width: 100%; }
+    #stop-input   { width: 90px; }
+
+    .track-btn {
+      height: 34px; padding: 0 18px;
+      background: var(--teal); color: #fff;
+      border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; flex-shrink: 0;
+      transition: background .15s;
+      align-self: flex-end;
+    }
+    .track-btn:hover    { background: var(--teal-dark); }
+    .track-btn:active   { opacity: .85; }
+    .track-btn:disabled { background: var(--muted); cursor: not-allowed; opacity: .7; }
+
+    /* ── Map ── */
+    #map {
+      flex: 1;
+      min-height: 0; /* critical for flex shrink */
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Loading overlay (sits inside #map) ── */
+    .map-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,.65);
+      backdrop-filter: blur(2px);
+      z-index: 999;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .map-overlay.show { opacity: 1; pointer-events: all; }
+
+    .spinner {
+      width: 44px; height: 44px;
+      border: 4px solid var(--teal-light);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      flex-shrink: 0;
+      background: #1f2937;
+      color: rgba(255,255,255,.8);
+      height: 26px; padding: 0 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px;
+      z-index: 100;
+    }
+
+    #status-text.loading { color: #fcd34d; }
+    #status-text.error   { color: #fca5a5; }
+    #status-text.ok      { color: #6ee7b7; }
+    #countdown           { opacity: .6; font-variant-numeric: tabular-nums; }
+
+    /* ── Info panel ── */
+    .info-panel {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 210px;
+      z-index: 100;
+    }
+
+    /* tabs */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      flex: 1; height: 36px;
+      border: none; background: transparent;
+      font-size: 12px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      border-bottom: 2.5px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+
+    .tab-pane {
+      flex: 1; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 6px 12px 8px;
+    }
+    .tab-pane.hidden { display: none; }
+
+    /* ── ETA items ── */
+    .eta-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .eta-item:last-child { border-bottom: none; }
+
+    .eta-badge {
+      background: var(--teal); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px;
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .eta-time { font-weight: 600; font-size: 14px; flex: 1; }
+    .eta-mins {
+      font-size: 13px; font-weight: 700;
+      color: var(--green); flex-shrink: 0;
+    }
+    .eta-mins.soon { color: var(--amber); }
+    .eta-mins.now  { color: var(--red); animation: pulse 1s infinite; }
+
+    /* ── Schedule items ── */
+    .sched-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sched-item:last-child { border-bottom: none; }
+
+    .sched-time { font-weight: 600; font-size: 14px; width: 56px; flex-shrink: 0; }
+    .sched-sign {
+      font-size: 12px; color: var(--muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Generic hint ── */
+    .hint {
+      color: var(--muted); font-size: 13px;
+      padding: 14px 0; text-align: center;
+    }
+
+    /* ── Bus marker ── */
+    .bus-dot {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 2.5px solid #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+      color: #fff; letter-spacing: -.5px;
+    }
+
+    /* ── Animations ── */
+    @keyframes spin  { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+    /* ── Header actions ── */
+    .header-actions { display: flex; gap: 6px; }
+
+    /* ── About modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 2000;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+
+    .modal-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 22px 20px 18px;
+      max-width: 360px; width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute; top: 12px; right: 12px;
+      background: var(--bg); border: none;
+      width: 28px; height: 28px; border-radius: 50%;
+      font-size: 14px; cursor: pointer; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close:hover { background: var(--border); }
+
+    .modal-card h2 {
+      font-size: 16px; font-weight: 700; margin-bottom: 12px;
+      color: var(--teal);
+    }
+
+    .modal-card p {
+      font-size: 13px; line-height: 1.55;
+      color: var(--text); margin-bottom: 10px;
+    }
+
+    .modal-disclaimer {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px; line-height: 1.5;
+      color: #92400e;
+      margin-bottom: 12px;
+    }
+
+    .modal-links { margin-bottom: 10px; }
+    .modal-links a {
+      font-size: 13px; color: var(--teal); text-decoration: none;
+    }
+    .modal-links a:hover { text-decoration: underline; }
+
+    .modal-footer-note {
+      font-size: 11px; color: var(--muted);
+      margin-bottom: 0;
+    }
+
+    /* ── Thin scrollbar ── */
+    .tab-pane::-webkit-scrollbar       { width: 3px; }
+    .tab-pane::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── Responsive tweaks for very small screens ── */
+    @media (max-width: 360px) {
+      #stop-input { width: 76px; }
+      .track-btn  { padding: 0 12px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-brand">
+      <!-- Material bus icon path -->
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0
+                 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78c.61-.55
+                 1-1.34 1-2.22V6c0-3.5-3.58-4-8-4s-8 .5-8 4v10zm3.5
+                 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3
+                 1.5 1.5 0 010 3zM5 6h14v5H5V6z"/>
+      </svg>
+      <div>
+        <div class="app-title">Broward Ride</div>
+        <div class="app-sub">Unofficial · Real-time Transit</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="icon-btn" onclick="openAbout()" title="About" aria-label="About this app">ℹ</button>
+      <button type="button" class="icon-btn" id="toggle-btn" onclick="toggleControls()" title="Toggle controls" aria-label="Toggle controls">⚙</button>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <div class="ctrl-group ctrl-route">
+      <span class="ctrl-label">Route</span>
+      <select class="ctrl-select" id="route-select">
+        <option value="BCT109_North">Loading routes…</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Stop ID <span style="opacity:.6">(for ETA)</span></span>
+      <input class="ctrl-input" id="stop-input" type="text"
+             value="6250" placeholder="optional" maxlength="10" inputmode="numeric">
+    </div>
+    <button class="track-btn" onclick="track()">Track</button>
+  </div>
+
+  <!-- Map -->
+  <div id="map">
+    <div class="map-overlay" id="loading-overlay">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span id="status-text">Initializing…</span>
+    <span id="countdown"></span>
+  </div>
+
+  <!-- Info panel -->
+  <div class="info-panel">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-live-btn" onclick="setTab('live')">Live ETAs</button>
+      <button class="tab-btn"        id="tab-sched-btn" onclick="setTab('sched')">Schedule</button>
+    </div>
+    <div class="tab-pane" id="tab-live">
+      <p class="hint">Loading…</p>
+    </div>
+    <div class="tab-pane hidden" id="tab-sched">
+      <p class="hint">Loading…</p>
+    </div>
+  </div>
+
+
+  <!-- About / Disclaimer modal -->
+  <div id="about-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="About Broward Ride"
+       onclick="if(event.target===this)closeAbout()">
+    <div class="modal-card">
+      <button type="button" class="modal-close" onclick="closeAbout()" aria-label="Close">✕</button>
+      <h2>About Broward Ride</h2>
+      <div class="modal-disclaimer">
+        <strong>Unofficial app — not affiliated with Broward County or BCT.</strong>
+        Transit data may be delayed or inaccurate. For official information visit the links below.
+      </div>
+      <p>A community-made real-time tracker for Broward County Transit, built after the MyRide app was discontinued in February 2026.</p>
+      <div class="modal-links">
+        <a href="https://www.broward.org/BCT" target="_blank" rel="noopener noreferrer">broward.org/BCT — Official BCT website</a>
+      </div>
+      <p class="modal-footer-note">Open source · MIT License · Data from BCT public API</p>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/app.js"></script>
+<script>
+  function openAbout()  { document.getElementById('about-modal').classList.add('show'); }
+  function closeAbout() { document.getElementById('about-modal').classList.remove('show'); }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAbout(); });
+</script>
+</body>
+</html>
