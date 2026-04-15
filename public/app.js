@@ -450,11 +450,28 @@ async function refresh() {
   startCountdown();
 }
 
+// ── About modal ───────────────────────────────────────────────────────────────
+function openAbout()  { document.getElementById('about-modal').classList.add('show'); }
+function closeAbout() { document.getElementById('about-modal').classList.remove('show'); }
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   state.stop = document.getElementById('stop-input').value;
 
   initMap();
+
+  // Button event listeners (replaces inline onclick attributes)
+  document.getElementById('about-btn').addEventListener('click', openAbout);
+  document.getElementById('about-close-btn').addEventListener('click', closeAbout);
+  document.getElementById('about-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeAbout();
+  });
+  document.getElementById('toggle-btn').addEventListener('click', toggleControls);
+  document.getElementById('track-btn').addEventListener('click', track);
+  document.getElementById('tab-live-btn').addEventListener('click', () => setTab('live'));
+  document.getElementById('tab-sched-btn').addEventListener('click', () => setTab('sched'));
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAbout(); });
 
   document.getElementById('stop-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') track();
