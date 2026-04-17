@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:5080 --files 'public/**/*,server.js' --no-notify --reload-delay 1000\""
+    "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:8080 --files 'public/**/*,server.js' --no-notify --reload-delay 1000\""
   },
   "dependencies": {
     "dotenv": "^16.6.1",

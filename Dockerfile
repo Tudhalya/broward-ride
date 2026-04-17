@@ -11,6 +11,6 @@ RUN bun install --frozen-lockfile --production
 COPY --chown=bun:bun . .
 
 ENV NODE_ENV=production
-EXPOSE 3080
+EXPOSE 8080
 
 CMD ["bun", "server.js"]
