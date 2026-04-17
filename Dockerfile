@@ -1,16 +1,16 @@
-FROM node:20-alpine
+FROM oven/bun:latest
 
 # Run as non-root for security
-RUN mkdir -p /app && chown node:node /app
+RUN mkdir -p /app && chown bun:bun /app
 WORKDIR /app
-USER node
+USER bun
 
-COPY --chown=node:node package*.json ./
-RUN npm ci --omit=dev
+COPY --chown=bun:bun package*.json ./
+RUN bun install --frozen-lockfile --production
 
-COPY --chown=node:node . .
+COPY --chown=bun:bun . .
 
 ENV NODE_ENV=production
 EXPOSE 3080
 
-CMD ["node", "server.js"]
+CMD ["bun", "server.js"]
