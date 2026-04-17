@@ -1,0 +1,16 @@
+export const state = {
+  routeKey:   'BCT109_North',
+  stop:       '6250',
+  routes:     [],
+  stops:      [],
+  stopsRoute: null,
+  positions:  [],
+  eta:        [],
+  schedule:   [],
+  loading:    false,
+  error:      null,
+  lastUpdate: null,
+  ctrlsOpen:  true,
+  activeTab:  'live',
+  mapFitted:  false,
+};
