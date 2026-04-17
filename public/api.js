@@ -1,14 +1,17 @@
 import { state } from './state.js';
+import { STORAGE_KEYS } from './config.js';
 
-const STOPS_CACHE_PREFIX = 'broward_stops_v1_';
-const STOPS_CACHE_TTL    = 24 * 60 * 60 * 1000;
-
-const ROUTES_CACHE_KEY = 'broward_routes_v1';
+const STOPS_CACHE_TTL  = 24 * 60 * 60 * 1000;
 const ROUTES_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export async function apiFetch(path) {
-  const res  = await fetch(path);
-  const data = await res.json();
+  const res = await fetch(path);
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`HTTP ${res.status}: server returned non-JSON`);
+  }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
 }
@@ -31,44 +34,34 @@ export async function loadAll() {
   state.positions  = (posRes.status   === 'fulfilled' && Array.isArray(posRes.value))   ? posRes.value   : [];
   state.eta        = (etaRes.status   === 'fulfilled' && Array.isArray(etaRes.value))   ? etaRes.value   : [];
   state.schedule   = (schedRes.status === 'fulfilled' && Array.isArray(schedRes.value)) ? schedRes.value : [];
-  state.error      = posRes.status === 'rejected' ? posRes.reason.message : null;
+
+  const errs = [];
+  if (posRes.status  === 'rejected') errs.push(posRes.reason.message);
+  if (state.stop && etaRes.status   === 'rejected') errs.push('ETA unavailable');
+  if (state.stop && schedRes.status === 'rejected') errs.push('schedule unavailable');
+  state.error = errs.length ? errs.join('; ') : null;
+
   state.lastUpdate = new Date();
 }
 
-function getStopsFromCache(routeKey) {
+function getFromCache(key) {
   try {
-    const raw = localStorage.getItem(STOPS_CACHE_PREFIX + routeKey);
+    const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { data, expires } = JSON.parse(raw);
-    if (Date.now() > expires) { localStorage.removeItem(STOPS_CACHE_PREFIX + routeKey); return null; }
+    if (Date.now() > expires) { localStorage.removeItem(key); return null; }
     return data;
   } catch { return null; }
 }
 
-function saveStopsToCache(routeKey, data) {
+function saveToCache(key, data, ttl) {
   try {
-    localStorage.setItem(STOPS_CACHE_PREFIX + routeKey, JSON.stringify({ data, expires: Date.now() + STOPS_CACHE_TTL }));
-  } catch {}
-}
-
-function getRoutesFromCache() {
-  try {
-    const raw = localStorage.getItem(ROUTES_CACHE_KEY);
-    if (!raw) return null;
-    const { data, expires } = JSON.parse(raw);
-    if (Date.now() > expires) { localStorage.removeItem(ROUTES_CACHE_KEY); return null; }
-    return data;
-  } catch { return null; }
-}
-
-function saveRoutesToCache(data) {
-  try {
-    localStorage.setItem(ROUTES_CACHE_KEY, JSON.stringify({ data, expires: Date.now() + ROUTES_CACHE_TTL }));
+    localStorage.setItem(key, JSON.stringify({ data, expires: Date.now() + ttl }));
   } catch { /* ignore QuotaExceededError — still works, just not cached */ }
 }
 
 export async function loadRoutes() {
-  const cached = getRoutesFromCache();
+  const cached = getFromCache(STORAGE_KEYS.routes);
   if (cached) {
     state.routes = cached;
     return;
@@ -76,7 +69,7 @@ export async function loadRoutes() {
   try {
     const routes = await apiFetch('/api/routes');
     state.routes = routes;
-    saveRoutesToCache(routes);
+    saveToCache(STORAGE_KEYS.routes, routes, ROUTES_CACHE_TTL);
   } catch (err) {
     console.error('Failed to load routes:', err);
   }
@@ -85,7 +78,8 @@ export async function loadRoutes() {
 export async function loadStops() {
   if (state.stopsRoute === state.routeKey && state.stops.length) return;
 
-  const cached = getStopsFromCache(state.routeKey);
+  const cacheKey = STORAGE_KEYS.stopsPrefix + state.routeKey;
+  const cached   = getFromCache(cacheKey);
   if (cached) {
     state.stops      = cached;
     state.stopsRoute = state.routeKey;
@@ -96,7 +90,7 @@ export async function loadStops() {
     const stops      = await apiFetch(`/api/stops?route=${encodeURIComponent(state.routeKey)}`);
     state.stops      = stops;
     state.stopsRoute = state.routeKey;
-    saveStopsToCache(state.routeKey, stops);
+    saveToCache(cacheKey, stops, STOPS_CACHE_TTL);
   } catch (err) {
     console.error('Failed to load stops:', err);
     state.stops      = [];

@@ -1,14 +1,17 @@
-import { BROWARD_CENTER, BROWARD_ZOOM } from './config.js';
+import { BROWARD_CENTER, BROWARD_ZOOM, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { escapeHTML } from './utils.js';
 
-const MAP_VIEW_KEY = 'broward_map_view';
+const HEX_RE = /^[0-9a-f]{6}$/i;
+function safeColor(raw) {
+  return raw && HEX_RE.test(raw) ? `#${raw}` : '#0d9488';
+}
 
 let map, routeLayer, stopLayer, busLayer;
 
 function getSavedMapView() {
   try {
-    const raw = localStorage.getItem(MAP_VIEW_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.mapView);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
@@ -16,7 +19,7 @@ function getSavedMapView() {
 function saveMapView() {
   try {
     const c = map.getCenter();
-    localStorage.setItem(MAP_VIEW_KEY, JSON.stringify({ center: [c.lat, c.lng], zoom: map.getZoom() }));
+    localStorage.setItem(STORAGE_KEYS.mapView, JSON.stringify({ center: [c.lat, c.lng], zoom: map.getZoom() }));
   } catch {}
 }
 
@@ -71,7 +74,7 @@ export function renderMap() {
   routeLayer.clearLayers();
 
   const route    = state.routes.find((r) => r.Id === state.routeKey);
-  const color    = route ? `#${escapeHTML(route.Color)}` : '#0d9488';
+  const color    = safeColor(route?.Color);
   const routeNum = state.routeKey.replace(/^BCT(\d+).*/, '$1');
 
   if (route?.Shp) {
@@ -123,7 +126,7 @@ export function renderStops() {
   if (!state.stops.length) return;
 
   const route = state.routes.find((r) => r.Id === state.routeKey);
-  const color  = route ? `#${escapeHTML(route.Color)}` : '#0d9488';
+  const color  = safeColor(route?.Color);
 
   state.stops.forEach((stop) => {
     const isSelected = stop.Code === state.stop;
