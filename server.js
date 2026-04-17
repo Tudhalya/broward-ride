@@ -9,7 +9,7 @@ const helmet     = require('helmet');
 const rateLimit  = require('express-rate-limit');
 
 const app  = express();
-const PORT = process.env.PORT || 3080;
+const PORT = process.env.PORT || 5080;
 
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet({
