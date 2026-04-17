@@ -34,9 +34,10 @@ const limiterBase = {
   message:        { error: 'Too many requests — please slow down.' },
 };
 
-// /api/routes returns ~200 KB; the frontend localStorage cache means a
-// legitimate client only needs this once per 24 h session.
+// /api/routes and /api/stops return large payloads; localStorage cache means a
+// legitimate client only needs each once per 24 h session.
 app.use('/api/routes', rateLimit({ ...limiterBase, max: 5 }));
+app.use('/api/stops',  rateLimit({ ...limiterBase, max: 5 }));
 
 // Live endpoints: frontend auto-polls every 30 s (3 calls/poll = 6 req/min).
 // 30 req/min gives ~5× headroom for manual refreshes and multiple tabs.
@@ -179,6 +180,44 @@ app.get('/api/routes', async (_req, res) => {
     console.error(`ERROR      routes — ${err.message}`);
     res.status(502).json({ error: err.message });
   }
+});
+
+// GET /api/stops?route=BCT109_North  — stops for one route, filtered server-side
+// Full stops list (~706 KB) is fetched once and held in cache; each per-route
+// result is also cached so repeated requests for the same route are instant.
+app.get('/api/stops', async (req, res) => {
+  const { route } = req.query;
+  if (!route) return res.status(400).json({ error: 'route parameter required (e.g. BCT109_North)' });
+
+  const routeCacheKey = `/api/stops?route=${encodeURIComponent(route)}`;
+  const cached = getCache(routeCacheKey);
+  if (cached) {
+    console.log(`CACHE HIT  ${routeCacheKey}`);
+    res.set('X-Cache', 'HIT');
+    return res.json(cached);
+  }
+
+  // Fetch full stops list if not already cached
+  const ALL_STOPS_KEY = '__stops_all';
+  let allStops = getCache(ALL_STOPS_KEY);
+  if (!allStops) {
+    console.log('FETCH      stops (POST)');
+    try {
+      allStops = await fetchJSON(`${BCT_API}/Stops`, {
+        body:    { AgencyID: 'BCT' },
+        timeout: 20_000,
+      });
+      setCache(ALL_STOPS_KEY, allStops, TTL_ROUTES);
+    } catch (err) {
+      console.error(`ERROR      stops — ${err.message}`);
+      return res.status(502).json({ error: err.message });
+    }
+  }
+
+  const filtered = allStops.filter(s => Array.isArray(s.Routes) && s.Routes.includes(route));
+  setCache(routeCacheKey, filtered, TTL_ROUTES);
+  res.set('Cache-Control', `max-age=${Math.floor(TTL_ROUTES / 1000)}`);
+  res.json(filtered);
 });
 
 // GET /api/health

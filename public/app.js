@@ -15,11 +15,19 @@ const REFRESH_SEC    = 30;
 const BROWARD_CENTER = [26.12, -80.15]; // Broward County, FL
 const BROWARD_ZOOM   = 11;
 
+const DIR_LABEL = {
+  North: 'Northbound', South: 'Southbound',
+  East:  'Eastbound',  West:  'Westbound',
+  Clockwise: 'Clockwise', Counterclockwise: 'Counterclockwise',
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   routeKey:   'BCT109_North',  // Id from routes API (= route key used in all API calls)
   stop:       '6250',
   routes:     [],              // full route list from /api/routes
+  stops:      [],              // stops for the current route from /api/stops
+  stopsRoute: null,            // routeKey for which state.stops was last loaded
   positions:  [],
   eta:        [],
   schedule:   [],
@@ -32,7 +40,7 @@ const state = {
 };
 
 // ── Map ───────────────────────────────────────────────────────────────────────
-let map, routeLayer, busLayer;
+let map, routeLayer, stopLayer, busLayer;
 
 const MAP_VIEW_KEY = 'broward_map_view';
 
@@ -55,6 +63,9 @@ function initMap() {
   const center = saved ? saved.center : BROWARD_CENTER;
   const zoom   = saved ? saved.zoom   : BROWARD_ZOOM;
 
+  // If we're restoring a saved view, skip the auto-fit on first data load
+  if (saved) state.mapFitted = true;
+
   map = L.map('map', { center, zoom });
 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -65,7 +76,8 @@ function initMap() {
 
   map.on('moveend', saveMapView);
 
-  routeLayer = L.layerGroup().addTo(map);  // polyline drawn below buses
+  routeLayer = L.layerGroup().addTo(map);  // polyline drawn below stops and buses
+  stopLayer  = L.layerGroup().addTo(map);  // stop circles drawn below buses
   busLayer   = L.layerGroup().addTo(map);
 }
 
@@ -123,7 +135,7 @@ function renderMap() {
     const updated   = new Date(v.LastPositionUpdate);
     const minsAgo   = Math.max(0, Math.round((Date.now() - updated) / 60_000));
     const freshness = minsAgo <= 1 ? 'just now' : `${minsAgo} min ago`;
-    const label     = route ? `${routeNum} ${escapeHTML(route.GeoDirection)}` : escapeHTML(state.routeKey);
+    const label     = route ? `${routeNum} - ${escapeHTML(route.GeoDirection)}` : escapeHTML(state.routeKey);
 
     L.marker(ll, { icon })
      .bindPopup(`<b>Bus #${escapeHTML(String(v.Id))}</b><br>Route ${label}<br><small>GPS updated ${freshness}</small>`)
@@ -138,6 +150,34 @@ function renderMap() {
       : map.fitBounds(lls, { padding: [48, 48], maxZoom: 15 });
     state.mapFitted = true;
   }
+}
+
+function renderStops() {
+  stopLayer.clearLayers();
+
+  if (!state.stops.length) return;
+
+  const route = state.routes.find((r) => r.Id === state.routeKey);
+  const color  = route ? `#${escapeHTML(route.Color)}` : '#0d9488';
+
+  state.stops.forEach((stop) => {
+    const isSelected = stop.Code === state.stop;
+    L.circleMarker([stop.LatLng.Latitude, stop.LatLng.Longitude], {
+      radius:      isSelected ? 7 : 5,
+      color,
+      fillColor:   isSelected ? color : '#ffffff',
+      fillOpacity: 1,
+      weight:      2,
+      opacity:     0.85,
+    })
+    .bindPopup(`<b>${escapeHTML(stop.Name)}</b><br>Stop #${escapeHTML(stop.Code)}<br><small>Click to track this stop</small>`)
+    .on('click', () => {
+      document.getElementById('stop-input').value = stop.Code;
+      state.stop = stop.Code;
+      refresh();
+    })
+    .addTo(stopLayer);
+  });
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -287,6 +327,7 @@ function renderSchedule() {
 function renderAll() {
   renderStatus();
   renderMap();
+  renderStops();
   renderETA();
   renderSchedule();
 }
@@ -360,15 +401,54 @@ function track() {
 
   const newKey = document.getElementById('route-select').value;
 
-  if (newKey && newKey !== state.routeKey) state.mapFitted = false;
-  if (newKey) state.routeKey = newKey;
+  if (newKey && newKey !== state.routeKey) {
+    state.mapFitted  = false;
+    state.stopsRoute = null;
+    stopLayer.clearLayers();
+  }
+  if (newKey) { state.routeKey = newKey; updateRouteDisplay(); }
 
   state.stop = document.getElementById('stop-input').value.trim();
+
+  saveSelection();
 
   if (window.innerWidth < 480 && state.ctrlsOpen) toggleControls();
 
   startTrackCooldown();
   refresh();
+}
+
+// ── Selection persistence ─────────────────────────────────────────────────────
+const SELECTION_KEY = 'broward_selection_v1';
+
+function getSavedSelection() {
+  try { return JSON.parse(localStorage.getItem(SELECTION_KEY)) || null; }
+  catch { return null; }
+}
+
+function saveSelection() {
+  try { localStorage.setItem(SELECTION_KEY, JSON.stringify({ routeKey: state.routeKey, stop: state.stop })); }
+  catch {}
+}
+
+// ── Stops local cache ─────────────────────────────────────────────────────────
+const STOPS_CACHE_PREFIX = 'broward_stops_v1_';
+const STOPS_CACHE_TTL    = 24 * 60 * 60 * 1000;
+
+function getStopsFromCache(routeKey) {
+  try {
+    const raw = localStorage.getItem(STOPS_CACHE_PREFIX + routeKey);
+    if (!raw) return null;
+    const { data, expires } = JSON.parse(raw);
+    if (Date.now() > expires) { localStorage.removeItem(STOPS_CACHE_PREFIX + routeKey); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function saveStopsToCache(routeKey, data) {
+  try {
+    localStorage.setItem(STOPS_CACHE_PREFIX + routeKey, JSON.stringify({ data, expires: Date.now() + STOPS_CACHE_TTL }));
+  } catch {}
 }
 
 // ── Routes local cache ────────────────────────────────────────────────────────
@@ -420,10 +500,6 @@ function populateRouteSelect() {
     (groups[r.SName] = groups[r.SName] || []).push(r);
   });
 
-  const dirLabel = { North: 'Northbound', South: 'Southbound',
-                     East: 'Eastbound',   West: 'Westbound',
-                     Clockwise: 'Clockwise', Counterclockwise: 'Counterclockwise' };
-
   Object.keys(groups)
     .sort((a, b) => Number(a) - Number(b))
     .forEach((num) => {
@@ -433,19 +509,51 @@ function populateRouteSelect() {
       grp.label    = `${Number(num)} — ${lname.length > 38 ? lname.slice(0, 36) + '…' : lname}`;
 
       routes.forEach((r) => {
-        const opt      = document.createElement('option');
-        opt.value      = r.Id;
-        opt.textContent = dirLabel[r.GeoDirection] || r.GeoDirection;
-        opt.selected   = r.Id === state.routeKey;
+        const opt       = document.createElement('option');
+        opt.value       = r.Id;
+        opt.textContent = DIR_LABEL[r.GeoDirection] || r.GeoDirection;
+        opt.selected    = r.Id === state.routeKey;
         grp.appendChild(opt);
       });
       sel.appendChild(grp);
     });
+
+  updateRouteDisplay();
+}
+
+function updateRouteDisplay(routeKey = state.routeKey) {
+  const el    = document.getElementById('route-display');
+  const route = state.routes.find((r) => r.Id === routeKey);
+  if (!el || !route) return;
+  el.textContent = `${Number(route.SName)} - ${DIR_LABEL[route.GeoDirection] || route.GeoDirection}`;
+}
+
+// ── Stops ─────────────────────────────────────────────────────────────────────
+async function loadStops() {
+  if (state.stopsRoute === state.routeKey && state.stops.length) return;
+
+  const cached = getStopsFromCache(state.routeKey);
+  if (cached) {
+    state.stops      = cached;
+    state.stopsRoute = state.routeKey;
+    return;
+  }
+
+  try {
+    const stops      = await apiFetch(`/api/stops?route=${encodeURIComponent(state.routeKey)}`);
+    state.stops      = stops;
+    state.stopsRoute = state.routeKey;
+    saveStopsToCache(state.routeKey, stops);
+  } catch (err) {
+    console.error('Failed to load stops:', err);
+    state.stops      = [];
+    state.stopsRoute = state.routeKey;
+  }
 }
 
 // ── Refresh ───────────────────────────────────────────────────────────────────
 async function refresh() {
-  await loadAll();
+  await Promise.all([loadStops(), loadAll()]);
   renderAll();
   startCountdown();
 }
@@ -456,7 +564,14 @@ function closeAbout() { document.getElementById('about-modal').classList.remove(
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  state.stop = document.getElementById('stop-input').value;
+  const saved = getSavedSelection();
+  if (saved) {
+    state.routeKey = saved.routeKey;
+    state.stop     = saved.stop;
+  } else {
+    state.stop = document.getElementById('stop-input').value;
+  }
+  document.getElementById('stop-input').value = state.stop;
 
   initMap();
 
@@ -475,6 +590,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('stop-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') track();
+  });
+
+  document.getElementById('route-select').addEventListener('change', function () {
+    updateRouteDisplay(this.value);
+    this.blur();
   });
 
   // Give Leaflet one frame to measure container, then load routes + first refresh

@@ -129,8 +129,33 @@
     .ctrl-input:focus, .ctrl-select:focus { border-color: var(--teal); }
 
     .ctrl-route   { flex: 1; min-width: 0; }
-    #route-select { width: 100%; }
     #stop-input   { width: 90px; }
+
+    .route-select-wrap { position: relative; width: 100%; }
+    .route-select-wrap::after {
+      content: '▾';
+      position: absolute; right: 9px; top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--muted); font-size: 11px; line-height: 1;
+    }
+    #route-select {
+      width: 100%;
+      -webkit-appearance: none; appearance: none;
+      padding-right: 22px;
+    }
+    .route-select-display {
+      position: absolute; inset: 0;
+      padding: 0 22px 0 8px;
+      display: flex; align-items: center;
+      font-size: 13px; font-weight: 500; color: var(--text);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      pointer-events: none;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .route-select-wrap:focus-within .route-select-display { display: none; }
 
     .track-btn {
       height: 34px; padding: 0 18px;
@@ -387,9 +412,12 @@
   <div class="controls" id="controls">
     <div class="ctrl-group ctrl-route">
       <span class="ctrl-label">Route</span>
-      <select class="ctrl-select" id="route-select" title="Select a route">
-        <option value="BCT109_North">Loading routes…</option>
-      </select>
+      <div class="route-select-wrap">
+        <select class="ctrl-select" id="route-select" title="Select a route">
+          <option value="BCT109_North">Loading routes…</option>
+        </select>
+        <span class="route-select-display" id="route-display" aria-hidden="true">Loading routes…</span>
+      </div>
     </div>
     <div class="ctrl-group">
       <span class="ctrl-label">Stop ID <span style="opacity:.6">(for ETA)</span></span>
