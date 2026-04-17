@@ -52,7 +52,8 @@ const TTL_SCHED  = 30 * 24 * 3_600_000;  // 30 days – static schedule
 const TTL_ROUTES = 30 * 24 * 3_600_000;  // 30 days  – route shapes / stop lists
 
 // ── In-memory cache ──────────────────────────────────────────────────────────
-const cache = new Map();
+const cache         = new Map();
+const MAX_CACHE_SIZE = 500;
 
 function getCache(key) {
   const entry = cache.get(key);
@@ -62,6 +63,8 @@ function getCache(key) {
 }
 
 function setCache(key, data, ttl) {
+  // Evict oldest entry when at capacity (Map preserves insertion order)
+  if (cache.size >= MAX_CACHE_SIZE) cache.delete(cache.keys().next().value);
   cache.set(key, { data, exp: Date.now() + ttl });
 }
 

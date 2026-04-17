@@ -8,11 +8,21 @@ export function escapeHTML(str) {
 }
 
 // The API returns local Eastern time without a timezone suffix in EstimatedDeparture.
-// We append -04:00 (EDT) so Date can parse it correctly regardless of client timezone.
+// We compute the current Eastern UTC offset dynamically to handle EDT (-04:00) vs EST (-05:00).
+function easternOffset() {
+  const now    = new Date();
+  const utcMs  = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const etMs   = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const mins   = Math.round((etMs - utcMs) / 60_000);
+  const sign   = mins >= 0 ? '+' : '-';
+  const abs    = Math.abs(mins);
+  return `${sign}${String(Math.floor(abs / 60)).padStart(2, '0')}:${String(abs % 60).padStart(2, '0')}`;
+}
+
 export function toEastern(isoStr) {
   if (!isoStr) return null;
   const hasZone = /[-+]\d{2}:\d{2}$|Z$/.test(isoStr);
-  return new Date(hasZone ? isoStr : isoStr + '-04:00');
+  return new Date(hasZone ? isoStr : isoStr + easternOffset());
 }
 
 export function minsUntil(isoStr) {

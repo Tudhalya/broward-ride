@@ -1,4 +1,4 @@
-import { TRACK_COOLDOWN_SEC } from './config.js';
+import { TRACK_COOLDOWN_SEC, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { loadAll, loadRoutes, loadStops } from './api.js';
 import { initMap, clearStopLayer, invalidateMap } from './map.js';
@@ -7,23 +7,27 @@ import {
   setTab, toggleControls, openAbout, closeAbout, startCountdown,
 } from './ui.js';
 
-const SELECTION_KEY = 'broward_selection_v1';
-
 function getSavedSelection() {
-  try { return JSON.parse(localStorage.getItem(SELECTION_KEY)) || null; }
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.selection)) || null; }
   catch { return null; }
 }
 
 function saveSelection() {
-  try { localStorage.setItem(SELECTION_KEY, JSON.stringify({ routeKey: state.routeKey, stop: state.stop })); }
+  try { localStorage.setItem(STORAGE_KEYS.selection, JSON.stringify({ routeKey: state.routeKey, stop: state.stop })); }
   catch {}
 }
 
 async function refresh() {
   state.loading = true;
   renderStatus();
-  await Promise.all([loadStops(), loadAll()]);
-  state.loading = false;
+  try {
+    await Promise.all([loadStops(), loadAll()]);
+  } catch (err) {
+    console.error('Refresh failed:', err);
+    state.error = err.message;
+  } finally {
+    state.loading = false;
+  }
   renderAll();
   startCountdown(refresh);
 }

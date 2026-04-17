@@ -34,18 +34,18 @@ An unofficial, community-made real-time tracker for **Broward County Transit (BC
 ### Run locally
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
-Opens at `http://localhost:3080`. The `dev` script uses hot-reload via browser-sync.
+Opens at `http://localhost:5080`. The `dev` script uses hot-reload via browser-sync.
 
 ### Environment variables
 
 Create a `.env` file (optional — defaults work out of the box):
 
 ```
-PORT=3080
+PORT=5080
 BCT_API=https://myride2.broward.org/TransitAPICore
 ```
 
@@ -53,7 +53,7 @@ BCT_API=https://myride2.broward.org/TransitAPICore
 
 ```bash
 docker build -t broward-ride .
-docker run -p 3080:3080 broward-ride
+docker run -p 5080:5080 broward-ride
 ```
 
 ## API
