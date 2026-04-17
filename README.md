@@ -38,14 +38,14 @@ bun install
 bun run dev
 ```
 
-Opens at `http://localhost:5080`. The `dev` script uses hot-reload via browser-sync.
+Opens at `http://localhost:8080`. The `dev` script uses hot-reload via browser-sync.
 
 ### Environment variables
 
 Create a `.env` file (optional — defaults work out of the box):
 
 ```
-PORT=5080
+PORT=8080
 BCT_API=https://myride2.broward.org/TransitAPICore
 ```
 
@@ -53,7 +53,7 @@ BCT_API=https://myride2.broward.org/TransitAPICore
 
 ```bash
 docker build -t broward-ride .
-docker run -p 5080:5080 broward-ride
+docker run -p 8080:8080 broward-ride
 ```
 
 ## API

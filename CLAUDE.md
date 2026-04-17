@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install       # Install dependencies (uses bun.lock)
-npm run dev       # Start backend + browser-sync hot reload (port 3080, proxy 3080)
-npm start         # Production server on $PORT (default 3080)
+npm run dev       # Start backend + browser-sync hot reload (port 8080, proxy 8080)
+npm start         # Production server on $PORT (default 8080)
 ```
 
 No build step — vanilla JS served directly from `/public`.
@@ -16,7 +16,7 @@ No build step — vanilla JS served directly from `/public`.
 
 Create `.env` from `.env.example`:
 ```
-PORT=3080
+PORT=8080
 BCT_API=https://myride2.broward.org/TransitAPICore
 ```
 
