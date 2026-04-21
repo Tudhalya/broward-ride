@@ -8,8 +8,9 @@
     "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:8080 --files 'public/**/*,server.js' --no-notify --reload-delay 1000\""
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.19.0",
     "dotenv": "^16.6.1",
-    "express": "^4.19.2",
+    "express": "^4.22.1",
     "express-rate-limit": "^8.3.2",
     "helmet": "^8.1.0"
   },
