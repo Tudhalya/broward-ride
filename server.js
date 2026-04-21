@@ -2,6 +2,7 @@
 
 require('dotenv').config();
 
+const { Storage } = require('@google-cloud/storage');
 const express    = require('express');
 const https      = require('https');
 const path       = require('path');
@@ -51,6 +52,12 @@ const TTL_LIVE   = 30_000;          // 30 s  – vehicle positions & ETAs
 const TTL_SCHED  = 30 * 24 * 3_600_000;  // 30 days – static schedule
 const TTL_ROUTES = 30 * 24 * 3_600_000;  // 30 days  – route shapes / stop lists
 
+// ── GCS persistence (optional — skipped when GCS_BUCKET is unset) ────────────
+const GCS_BUCKET     = process.env.GCS_BUCKET || null;
+const gcs            = GCS_BUCKET ? new Storage() : null;
+const GCS_ROUTES_KEY = 'routes.json';
+const GCS_STOPS_KEY  = 'stops_all.json';
+
 // ── In-memory cache ──────────────────────────────────────────────────────────
 const cache         = new Map();
 const MAX_CACHE_SIZE = 500;
@@ -66,6 +73,45 @@ function setCache(key, data, ttl) {
   // Evict oldest entry when at capacity (Map preserves insertion order)
   if (cache.size >= MAX_CACHE_SIZE) cache.delete(cache.keys().next().value);
   cache.set(key, { data, exp: Date.now() + ttl });
+}
+
+// ── GCS helpers ──────────────────────────────────────────────────────────────
+async function readFromGCS(filename) {
+  try {
+    const [content] = await gcs.bucket(GCS_BUCKET).file(filename).download();
+    const { data, savedAt } = JSON.parse(content.toString());
+    const age = Date.now() - savedAt;
+    if (age > TTL_ROUTES) return null;
+    return { data, remainingTtl: TTL_ROUTES - age };
+  } catch (err) {
+    if (err.code !== 404) console.error(`GCS read  (${filename}): ${err.message}`);
+    return null;
+  }
+}
+
+function writeToGCS(filename, data) {
+  gcs.bucket(GCS_BUCKET).file(filename)
+    .save(JSON.stringify({ data, savedAt: Date.now() }), { contentType: 'application/json' })
+    .catch(err => console.error(`GCS write (${filename}): ${err.message}`));
+}
+
+async function warmCacheFromGCS() {
+  if (!gcs) return;
+  console.log('GCS  warming cache…');
+  const [routesRes, stopsRes] = await Promise.allSettled([
+    readFromGCS(GCS_ROUTES_KEY),
+    readFromGCS(GCS_STOPS_KEY),
+  ]);
+  if (routesRes.status === 'fulfilled' && routesRes.value) {
+    const { data, remainingTtl } = routesRes.value;
+    setCache('/api/routes', data, remainingTtl);
+    console.log('GCS  warm: routes');
+  }
+  if (stopsRes.status === 'fulfilled' && stopsRes.value) {
+    const { data, remainingTtl } = stopsRes.value;
+    setCache('__stops_all', data, remainingTtl);
+    console.log('GCS  warm: stops_all');
+  }
 }
 
 // ── Upstream fetch ────────────────────────────────────────────────────────────
@@ -177,6 +223,7 @@ app.get('/api/routes', async (_req, res) => {
       timeout: 15_000,  // larger payload, give it more time
     });
     setCache(cacheKey, data, TTL_ROUTES);
+    if (gcs) writeToGCS(GCS_ROUTES_KEY, data);
     res.set('Cache-Control', `max-age=${Math.floor(TTL_ROUTES / 1000)}`);
     res.json(data);
   } catch (err) {
@@ -211,6 +258,7 @@ app.get('/api/stops', async (req, res) => {
         timeout: 20_000,
       });
       setCache(ALL_STOPS_KEY, allStops, TTL_ROUTES);
+      if (gcs) writeToGCS(GCS_STOPS_KEY, allStops);
     } catch (err) {
       console.error(`ERROR      stops — ${err.message}`);
       return res.status(502).json({ error: err.message });
@@ -231,20 +279,25 @@ app.get('/api/health', (_req, res) => {
 // ── Static frontend ───────────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
 
-const server = app.listen(PORT, () => {
-  console.log(`\nBroward Ride  →  http://localhost:${PORT}\n`);
-});
+// ── Startup ───────────────────────────────────────────────────────────────────
+(async () => {
+  await warmCacheFromGCS();
 
-// ── Graceful shutdown ─────────────────────────────────────────────────────────
-function shutdown(signal) {
-  console.log(`\n${signal} received — shutting down gracefully…`);
-  server.close(() => {
-    console.log('All connections closed. Exiting.');
-    process.exit(0);
+  const server = app.listen(PORT, () => {
+    console.log(`\nBroward Ride  →  http://localhost:${PORT}\n`);
   });
-  // Force-exit if open connections don't drain within 10 s
-  setTimeout(() => { console.error('Forced exit after timeout.'); process.exit(1); }, 10_000).unref();
-}
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
+  // ── Graceful shutdown ───────────────────────────────────────────────────────
+  function shutdown(signal) {
+    console.log(`\n${signal} received — shutting down gracefully…`);
+    server.close(() => {
+      console.log('All connections closed. Exiting.');
+      process.exit(0);
+    });
+    // Force-exit if open connections don't drain within 10 s
+    setTimeout(() => { console.error('Forced exit after timeout.'); process.exit(1); }, 10_000).unref();
+  }
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
+})();
