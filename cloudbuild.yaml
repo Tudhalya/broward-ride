@@ -30,6 +30,10 @@ steps:
       - --platform
       - managed
       - --quiet
+      - --min-instances
+      - "0"
+      - --max-instances
+      - "2"
 
 substitutions:
   _SERVICE_NAME: broward-ride
