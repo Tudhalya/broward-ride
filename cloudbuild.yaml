@@ -1,5 +1,6 @@
 steps:
   - name: gcr.io/cloud-builders/docker
+    id: build
     args:
       - build
       - -t
@@ -7,6 +8,32 @@ steps:
       - -t
       - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:latest
       - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args:
+      - push
+      - --all-tags
+      - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - $_SERVICE_NAME
+      - --image
+      - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:$COMMIT_SHA
+      - --region
+      - $_REGION
+      - --platform
+      - managed
+      - --quiet
+
+substitutions:
+  _SERVICE_NAME: broward-ride
+  _REGION: us-east1
 
 images:
   - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:$COMMIT_SHA
