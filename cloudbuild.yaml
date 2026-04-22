@@ -3,14 +3,14 @@ steps:
     args:
       - build
       - -t
-      - gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA
+      - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:$COMMIT_SHA
       - -t
-      - gcr.io/$PROJECT_ID/$REPO_NAME:latest
+      - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:latest
       - .
 
 images:
-  - gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA
-  - gcr.io/$PROJECT_ID/$REPO_NAME:latest
+  - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:$COMMIT_SHA
+  - us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/$REPO_NAME:latest
 
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
