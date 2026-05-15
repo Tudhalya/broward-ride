@@ -120,6 +120,24 @@ export function renderMap() {
   }
 }
 
+// Project (lat, lng) onto the nearest point on the polyline segments.
+// Uses planar math — accurate enough for the small geographic area of Broward County.
+function snapToPolyline(pts, lat, lng) {
+  let bestDist = Infinity, bestLat = lat, bestLng = lng;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [aLat, aLng] = pts[i];
+    const [bLat, bLng] = pts[i + 1];
+    const dLat = bLat - aLat, dLng = bLng - aLng;
+    const lenSq = dLat * dLat + dLng * dLng;
+    if (lenSq === 0) continue;
+    const t = Math.max(0, Math.min(1, ((lat - aLat) * dLat + (lng - aLng) * dLng) / lenSq));
+    const pLat = aLat + t * dLat, pLng = aLng + t * dLng;
+    const dist = (lat - pLat) ** 2 + (lng - pLng) ** 2;
+    if (dist < bestDist) { bestDist = dist; bestLat = pLat; bestLng = pLng; }
+  }
+  return [bestLat, bestLng];
+}
+
 export function renderStops() {
   stopLayer.clearLayers();
 
@@ -127,10 +145,14 @@ export function renderStops() {
 
   const route = state.routes.find((r) => r.Id === state.routeKey);
   const color  = safeColor(route?.Color);
+  const pts    = route?.Shp ? decodePolyline(route.Shp) : null;
 
   state.stops.forEach((stop) => {
+    const [lat, lng] = pts
+      ? snapToPolyline(pts, stop.LatLng.Latitude, stop.LatLng.Longitude)
+      : [stop.LatLng.Latitude, stop.LatLng.Longitude];
     const isSelected = stop.Code === state.stop;
-    L.circleMarker([stop.LatLng.Latitude, stop.LatLng.Longitude], {
+    L.circleMarker([lat, lng], {
       radius:      isSelected ? 7 : 5,
       color,
       fillColor:   isSelected ? color : '#ffffff',
