@@ -10,7 +10,8 @@ export const state = {
   loading:    false,
   error:      null,
   lastUpdate: null,
-  ctrlsOpen:  true,
   activeTab:  'live',
   mapFitted:  false,
+  notifyMins: null,
+  notified:   new Set(),
 };

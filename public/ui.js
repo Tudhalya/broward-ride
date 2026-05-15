@@ -80,12 +80,37 @@ export function renderSchedule() {
   `).join('');
 }
 
+export function renderNotifyBar() {
+  const bar = document.getElementById('notify-bar');
+  if (!bar) return;
+  const btn = document.getElementById('notify-toggle-btn');
+  const sel = document.getElementById('notify-mins-select');
+
+  if (!state.stop) {
+    bar.classList.add('hidden');
+    return;
+  }
+  bar.classList.remove('hidden');
+
+  if (state.notifyMins) {
+    btn.textContent = '🔔 On';
+    btn.classList.add('active');
+    sel.classList.remove('hidden');
+    sel.value = String(state.notifyMins);
+  } else {
+    btn.textContent = '🔔 Notify me';
+    btn.classList.remove('active');
+    sel.classList.add('hidden');
+  }
+}
+
 export function renderAll() {
   renderStatus();
   renderMap();
   renderStops();
   renderETA();
   renderSchedule();
+  renderNotifyBar();
 }
 
 export function populateRouteSelect() {
@@ -131,13 +156,6 @@ export function setTab(tab) {
   document.getElementById('tab-sched').classList.toggle('hidden', tab !== 'sched');
   document.getElementById('tab-live-btn').classList.toggle('active',  tab === 'live');
   document.getElementById('tab-sched-btn').classList.toggle('active', tab === 'sched');
-}
-
-export function toggleControls() {
-  state.ctrlsOpen = !state.ctrlsOpen;
-  document.getElementById('controls').classList.toggle('collapsed', !state.ctrlsOpen);
-  // Let Leaflet know the map size changed after CSS transition
-  setTimeout(() => invalidateMap(), 270);
 }
 
 export function openAbout()  { document.getElementById('about-modal').classList.add('show'); }

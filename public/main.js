@@ -1,11 +1,12 @@
 import { TRACK_COOLDOWN_SEC, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { loadAll, loadRoutes, loadStops } from './api.js';
-import { initMap, clearStopLayer, invalidateMap } from './map.js';
+import { initMap, clearStopLayer, invalidateMap, startGeolocation } from './map.js';
 import {
-  renderAll, renderStatus, populateRouteSelect, updateRouteDisplay,
-  setTab, toggleControls, openAbout, closeAbout, startCountdown,
+  renderAll, renderStatus, renderNotifyBar, populateRouteSelect, updateRouteDisplay,
+  setTab, openAbout, closeAbout, startCountdown,
 } from './ui.js';
+import { requestPermission, checkAndNotify } from './notifications.js';
 
 function getSavedSelection() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.selection)) || null; }
@@ -29,6 +30,7 @@ async function refresh() {
     state.loading = false;
   }
   renderAll();
+  checkAndNotify();
   startCountdown(refresh);
 }
 
@@ -60,15 +62,16 @@ function track() {
   if (newKey && newKey !== state.routeKey) {
     state.mapFitted  = false;
     state.stopsRoute = null;
+    state.notified.clear();
     clearStopLayer();
   }
   if (newKey) { state.routeKey = newKey; updateRouteDisplay(); }
 
-  state.stop = document.getElementById('stop-input').value.trim();
+  const newStop = document.getElementById('stop-input').value.trim();
+  if (newStop !== state.stop) state.notified.clear();
+  state.stop = newStop;
 
   saveSelection();
-
-  if (window.innerWidth < 480 && state.ctrlsOpen) toggleControls();
 
   startTrackCooldown();
   refresh();
@@ -85,13 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('stop-input').value = state.stop;
 
   initMap();
+  startGeolocation();
 
   document.getElementById('about-btn').addEventListener('click', openAbout);
   document.getElementById('about-close-btn').addEventListener('click', closeAbout);
   document.getElementById('about-modal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeAbout();
   });
-  document.getElementById('toggle-btn').addEventListener('click', toggleControls);
   document.getElementById('track-btn').addEventListener('click', track);
   document.getElementById('tab-live-btn').addEventListener('click', () => setTab('live'));
   document.getElementById('tab-sched-btn').addEventListener('click', () => setTab('sched'));
@@ -109,8 +112,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.addEventListener('broward:stop-selected', (e) => {
     document.getElementById('stop-input').value = e.detail.code;
+    if (e.detail.code !== state.stop) state.notified.clear();
     state.stop = e.detail.code;
     refresh();
+  });
+
+  document.getElementById('notify-toggle-btn').addEventListener('click', async () => {
+    if (state.notifyMins) {
+      state.notifyMins = null;
+      renderNotifyBar();
+    } else {
+      const granted = await requestPermission();
+      if (granted) {
+        state.notifyMins = 5;
+        renderNotifyBar();
+      }
+    }
+  });
+
+  document.getElementById('notify-mins-select').addEventListener('change', function () {
+    state.notifyMins = Number(this.value);
   });
 
   // Give Leaflet one frame to measure container, then load routes + first refresh

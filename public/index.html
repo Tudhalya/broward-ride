@@ -95,18 +95,7 @@
       align-items: flex-end;
       gap: 8px;
       flex-wrap: wrap;
-      overflow: hidden;
-      max-height: 80px;
-      transition: max-height .25s ease, padding .25s ease, opacity .25s ease;
       z-index: 400;
-    }
-
-    .controls.collapsed {
-      max-height: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-      opacity: 0;
-      pointer-events: none;
     }
 
     .ctrl-group { display: flex; flex-direction: column; gap: 3px; }
@@ -304,9 +293,31 @@
       color: #fff; letter-spacing: -.5px;
     }
 
+    /* ── User location marker ── */
+    .user-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 2px solid #fff;
+      position: relative;
+    }
+    .user-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: rgba(37,99,235,.4);
+      will-change: transform, opacity;
+      animation: user-pulse 2s ease-out infinite;
+    }
+
     /* ── Animations ── */
     @keyframes spin  { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+    @keyframes user-pulse {
+      0%   { transform: scale(1);   opacity: 1; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
 
     /* ── Header actions ── */
     .header-actions { display: flex; gap: 6px; }
@@ -372,6 +383,34 @@
       margin-bottom: 0;
     }
 
+    /* ── Notify bar ── */
+    .notify-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+    .notify-bar.hidden { display: none; }
+
+    .notify-btn {
+      font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--surface); color: var(--text);
+      cursor: pointer; white-space: nowrap;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .notify-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .notify-btn:hover:not(.active) { border-color: var(--teal); color: var(--teal); }
+
+    .notify-select {
+      font-size: 11px; padding: 3px 6px;
+      border: 1.5px solid var(--border); border-radius: 6px;
+      background: var(--surface); color: var(--text);
+    }
+    .notify-select.hidden { display: none; }
+
     /* ── Thin scrollbar ── */
     .tab-pane::-webkit-scrollbar       { width: 3px; }
     .tab-pane::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -404,7 +443,6 @@
     </div>
     <div class="header-actions">
       <button type="button" class="icon-btn" id="about-btn" title="About" aria-label="About this app">ℹ</button>
-      <button type="button" class="icon-btn" id="toggle-btn" title="Toggle controls" aria-label="Toggle controls">⚙</button>
     </div>
   </header>
 
@@ -445,6 +483,14 @@
     <div class="tabs">
       <button class="tab-btn active" id="tab-live-btn">Live ETAs</button>
       <button class="tab-btn"        id="tab-sched-btn">Schedule</button>
+    </div>
+    <div id="notify-bar" class="notify-bar hidden">
+      <button type="button" id="notify-toggle-btn" class="notify-btn">🔔 Notify me</button>
+      <select id="notify-mins-select" class="notify-select hidden">
+        <option value="5">5 min</option>
+        <option value="10">10 min</option>
+        <option value="15">15 min</option>
+      </select>
     </div>
     <div class="tab-pane" id="tab-live">
       <p class="hint">Loading…</p>

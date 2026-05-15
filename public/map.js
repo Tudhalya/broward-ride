@@ -7,7 +7,8 @@ function safeColor(raw) {
   return raw && HEX_RE.test(raw) ? `#${raw}` : '#0d9488';
 }
 
-let map, routeLayer, stopLayer, busLayer;
+let map, routeLayer, stopLayer, busLayer, userLayer;
+let watchId = null;
 
 function getSavedMapView() {
   try {
@@ -59,6 +60,7 @@ export function initMap() {
   routeLayer = L.layerGroup().addTo(map);
   stopLayer  = L.layerGroup().addTo(map);
   busLayer   = L.layerGroup().addTo(map);
+  userLayer  = L.layerGroup().addTo(map);
 }
 
 export function invalidateMap() {
@@ -136,6 +138,37 @@ function snapToPolyline(pts, lat, lng) {
     if (dist < bestDist) { bestDist = dist; bestLat = pLat; bestLng = pLng; }
   }
   return [bestLat, bestLng];
+}
+
+export function startGeolocation() {
+  if (!navigator.geolocation || watchId !== null) return;
+
+  watchId = navigator.geolocation.watchPosition(
+    ({ coords }) => {
+      userLayer.clearLayers();
+      const ll = [coords.latitude, coords.longitude];
+
+      L.circle(ll, {
+        radius:      coords.accuracy,
+        color:       '#2563eb',
+        fillColor:   '#2563eb',
+        fillOpacity: 0.1,
+        weight:      1,
+      }).addTo(userLayer);
+
+      L.marker(ll, {
+        icon: L.divIcon({
+          className:  '',
+          html:       '<div class="user-dot"></div>',
+          iconSize:   [14, 14],
+          iconAnchor: [7, 7],
+        }),
+        zIndexOffset: 1000,
+      }).bindPopup('You are here').addTo(userLayer);
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 15_000 },
+  );
 }
 
 export function renderStops() {
