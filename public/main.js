@@ -1,7 +1,7 @@
 import { TRACK_COOLDOWN_SEC, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { loadAll, loadRoutes, loadStops } from './api.js';
-import { initMap, clearStopLayer, invalidateMap, startGeolocation } from './map.js';
+import { initMap, clearStopLayer, invalidateMap, locateUser } from './map.js';
 import {
   renderAll, renderStatus, renderNotifyBar, populateRouteSelect, updateRouteDisplay,
   setTab, openAbout, closeAbout, startCountdown,
@@ -88,9 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('stop-input').value = state.stop;
 
   initMap();
-  startGeolocation();
 
   document.getElementById('about-btn').addEventListener('click', openAbout);
+  document.getElementById('locate-btn').addEventListener('click', locateUser);
   document.getElementById('about-close-btn').addEventListener('click', closeAbout);
   document.getElementById('about-modal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeAbout();
