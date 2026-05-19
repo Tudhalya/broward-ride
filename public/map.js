@@ -9,6 +9,8 @@ function safeColor(raw) {
 
 let map, routeLayer, stopLayer, busLayer, userLayer;
 let watchId = null;
+let userLatLng = null;
+let panOnNextFix = false;
 
 function getSavedMapView() {
   try {
@@ -140,13 +142,14 @@ function snapToPolyline(pts, lat, lng) {
   return [bestLat, bestLng];
 }
 
-export function startGeolocation() {
+function startGeolocation() {
   if (!navigator.geolocation || watchId !== null) return;
 
   watchId = navigator.geolocation.watchPosition(
     ({ coords }) => {
       userLayer.clearLayers();
       const ll = [coords.latitude, coords.longitude];
+      userLatLng = ll;
 
       L.circle(ll, {
         radius:      coords.accuracy,
@@ -165,10 +168,24 @@ export function startGeolocation() {
         }),
         zIndexOffset: 1000,
       }).bindPopup('You are here').addTo(userLayer);
+
+      if (panOnNextFix) {
+        panOnNextFix = false;
+        map.flyTo(ll, Math.max(map.getZoom(), 15));
+      }
     },
     () => {},
     { enableHighAccuracy: true, maximumAge: 15_000 },
   );
+}
+
+export function locateUser() {
+  if (userLatLng) {
+    map.flyTo(userLatLng, Math.max(map.getZoom(), 15));
+    return;
+  }
+  panOnNextFix = true;
+  startGeolocation();
 }
 
 export function renderStops() {
