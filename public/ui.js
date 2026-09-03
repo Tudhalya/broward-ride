@@ -140,6 +140,7 @@ export function populateRouteSelect() {
       sel.appendChild(grp);
     });
 
+  if (state.routeKey) sel.value = state.routeKey;
   updateRouteDisplay();
 }
 
