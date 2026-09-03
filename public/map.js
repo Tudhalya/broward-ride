@@ -58,7 +58,7 @@ export async function initMap() {
   } catch (err) {
     console.error('Failed to load map config:', err);
   }
-  const keyParam = cartoApiKey ? `?api_key=${encodeURIComponent(cartoApiKey)}` : '';
+  const keyParam = cartoApiKey ? `?key=${encodeURIComponent(cartoApiKey)}` : '';
 
   L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png${keyParam}`, {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
