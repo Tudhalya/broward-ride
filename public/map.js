@@ -1,6 +1,7 @@
 import { BROWARD_CENTER, BROWARD_ZOOM, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { escapeHTML } from './utils.js';
+import { apiFetch } from './api.js';
 
 const HEX_RE = /^[0-9a-f]{6}$/i;
 function safeColor(raw) {
@@ -42,7 +43,7 @@ function decodePolyline(enc) {
   return pts;
 }
 
-export function initMap() {
+export async function initMap() {
   const saved  = getSavedMapView();
   const center = saved ? saved.center : BROWARD_CENTER;
   const zoom   = saved ? saved.zoom   : BROWARD_ZOOM;
@@ -51,7 +52,15 @@ export function initMap() {
 
   map = L.map('map', { center, zoom });
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  let cartoApiKey = '';
+  try {
+    ({ cartoApiKey } = await apiFetch('/api/config'));
+  } catch (err) {
+    console.error('Failed to load map config:', err);
+  }
+  const keyParam = cartoApiKey ? `?api_key=${encodeURIComponent(cartoApiKey)}` : '';
+
+  L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png${keyParam}`, {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 19,

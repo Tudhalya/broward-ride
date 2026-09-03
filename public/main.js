@@ -77,7 +77,7 @@ function track() {
   refresh();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const saved = getSavedSelection();
   if (saved) {
     state.routeKey = saved.routeKey;
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.getElementById('stop-input').value = state.stop;
 
-  initMap();
+  await initMap();
 
   document.getElementById('about-btn').addEventListener('click', openAbout);
   document.getElementById('locate-btn').addEventListener('click', locateUser);

@@ -44,7 +44,8 @@ app.use('/api/stops',  rateLimit({ ...limiterBase, max: 5 }));
 // 30 req/min gives ~5× headroom for manual refreshes and multiple tabs.
 app.use('/api', rateLimit({ ...limiterBase, max: 30 }));
 
-const BCT_API   = process.env.BCT_API || 'https://myride2.broward.org/TransitAPICore';
+const BCT_API       = process.env.BCT_API || 'https://myride2.broward.org/TransitAPICore';
+const CARTO_API_KEY = process.env.CARTO_API_KEY || '';
 // The API only responds to mobile user-agents (originally served the MyRide mobile app)
 const MOBILE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1';
 
@@ -269,6 +270,11 @@ app.get('/api/stops', async (req, res) => {
   setCache(routeCacheKey, filtered, TTL_ROUTES);
   res.set('Cache-Control', `max-age=${Math.floor(TTL_ROUTES / 1000)}`);
   res.json(filtered);
+});
+
+// GET /api/config — public, non-secret client config (CARTO key is referrer-restricted)
+app.get('/api/config', (_req, res) => {
+  res.json({ cartoApiKey: CARTO_API_KEY });
 });
 
 // GET /api/health
