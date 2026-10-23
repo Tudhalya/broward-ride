@@ -8,17 +8,17 @@
     "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:8080 --files 'public/**/*,server.js' --no-notify --reload-delay 1000\""
   },
   "dependencies": {
-    "@google-cloud/storage": "^7.19.0",
+    "@google-cloud/storage": "^7.22.0",
     "dotenv": "^16.6.1",
-    "express": "^4.22.2",
-    "express-rate-limit": "^8.5.2",
-    "helmet": "^8.1.0"
+    "express": "^4.22.3",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "browser-sync": "^3.0.4",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.5"
   }
 }
