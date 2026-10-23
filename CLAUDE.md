@@ -37,6 +37,7 @@ Rate limiting: 5 req/min for large-payload endpoints, 30 req/min for live endpoi
 | `api.js` | `apiFetch()` wrapper with localStorage caching |
 | `map.js` | Leaflet map, bus markers, route polylines, stop circles |
 | `ui.js` | DOM rendering for status bar, ETA/schedule tabs, modals |
+| `picker.js` | Custom route dropdown (listbox), scrolls selected route's header to top on open |
 | `config.js` | Constants: `REFRESH_SEC`, `BROWARD_CENTER`, `DIR_LABEL` |
 | `utils.js` | `escapeHTML()`, time formatting, timezone helpers |
 

@@ -3,9 +3,10 @@ import { state } from './state.js';
 import { loadAll, loadRoutes, loadStops } from './api.js';
 import { initMap, clearStopLayer, invalidateMap, locateUser } from './map.js';
 import {
-  renderAll, renderStatus, renderNotifyBar, populateRouteSelect, updateRouteDisplay,
+  renderAll, renderStatus, renderNotifyBar,
   setTab, openAbout, closeAbout, startCountdown,
 } from './ui.js';
+import { initRoutePicker, populateRoutePicker } from './picker.js';
 import { requestPermission, checkAndNotify } from './notifications.js';
 
 function getSavedSelection() {
@@ -57,7 +58,7 @@ function startTrackCooldown() {
 function track() {
   if (trackCooldownId) return;
 
-  const newKey = document.getElementById('route-select').value;
+  const newKey = document.getElementById('route-btn').dataset.value;
 
   if (newKey && newKey !== state.routeKey) {
     state.mapFitted  = false;
@@ -65,7 +66,7 @@ function track() {
     state.notified.clear();
     clearStopLayer();
   }
-  if (newKey) { state.routeKey = newKey; updateRouteDisplay(); }
+  if (newKey) state.routeKey = newKey;
 
   const newStop = document.getElementById('stop-input').value.trim();
   if (newStop !== state.stop) state.notified.clear();
@@ -105,10 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') track();
   });
 
-  document.getElementById('route-select').addEventListener('change', function () {
-    updateRouteDisplay(this.value);
-    this.blur();
-  });
+  initRoutePicker();
 
   document.addEventListener('broward:stop-selected', (e) => {
     document.getElementById('stop-input').value = e.detail.code;
@@ -137,7 +135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Give Leaflet one frame to measure container, then load routes + first refresh
   requestAnimationFrame(() => {
     invalidateMap();
-    loadRoutes().then(populateRouteSelect);
+    loadRoutes().then(populateRoutePicker);
     refresh();
   });
 });

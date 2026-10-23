@@ -120,31 +120,45 @@
     .ctrl-route   { flex: 1; min-width: 0; }
     #stop-input   { width: 90px; }
 
-    .route-select-wrap { position: relative; width: 100%; }
-    .route-select-wrap::after {
-      content: '▾';
-      position: absolute; right: 9px; top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
+    .route-picker { position: relative; width: 100%; }
+    .route-arrow {
+      position: absolute; right: 0; top: 0; bottom: 0;
+      width: 26px;
+      background: none; border: none; cursor: pointer;
       color: var(--muted); font-size: 11px; line-height: 1;
     }
-    #route-select {
+    .route-search { width: 100%; padding-right: 22px; }
+    .route-btn {
       width: 100%;
-      -webkit-appearance: none; appearance: none;
       padding-right: 22px;
-    }
-    .route-select-display {
-      position: absolute; inset: 0;
-      padding: 0 22px 0 8px;
-      display: flex; align-items: center;
-      font-size: 13px; font-weight: 500; color: var(--text);
-      background: var(--surface);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      pointer-events: none;
+      text-align: left; cursor: pointer;
       overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     }
-    .route-select-wrap:focus-within .route-select-display { display: none; }
+    .route-list {
+      position: absolute; top: calc(100% + 4px); left: 0;
+      width: min(360px, calc(100vw - 24px));
+      max-height: min(420px, 60vh);
+      overflow-y: auto; overscroll-behavior: contain;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,.18);
+      outline: none;
+      z-index: 1000;
+    }
+    .route-group + .route-group { border-top: 1px solid var(--border); }
+    .route-group-label {
+      padding: 10px 12px 4px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px;
+      color: var(--muted);
+    }
+    .route-option {
+      padding: 11px 12px 11px 24px;
+      font-size: 14px; cursor: pointer;
+    }
+    .route-option:hover, .route-option.active { background: var(--bg); }
+    .route-option[aria-selected="true"] { color: var(--teal); font-weight: 600; }
 
     .track-btn {
       height: 34px; padding: 0 18px;
@@ -455,11 +469,14 @@
   <div class="controls" id="controls">
     <div class="ctrl-group ctrl-route">
       <span class="ctrl-label">Route</span>
-      <div class="route-select-wrap">
-        <select class="ctrl-select" id="route-select" title="Select a route">
-          <option value="BCT109_North">Loading routes…</option>
-        </select>
-        <span class="route-select-display" id="route-display" aria-hidden="true">Loading routes…</span>
+      <div class="route-picker">
+        <button type="button" class="ctrl-select route-btn" id="route-btn" title="Select a route"
+                aria-haspopup="listbox" aria-expanded="false" aria-controls="route-list">Loading routes…</button>
+        <input class="ctrl-input route-search" id="route-search" type="text" placeholder="Search routes…"
+               role="combobox" aria-expanded="true" aria-controls="route-list" aria-autocomplete="list"
+               aria-label="Search routes" autocomplete="off" spellcheck="false" hidden>
+        <button type="button" class="route-arrow" id="route-arrow" tabindex="-1" aria-hidden="true">▾</button>
+        <div class="route-list" id="route-list" role="listbox" aria-label="Routes" tabindex="-1" hidden></div>
       </div>
     </div>
     <div class="ctrl-group">
