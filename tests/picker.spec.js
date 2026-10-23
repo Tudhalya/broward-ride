@@ -57,6 +57,16 @@ test('autofocuses search only on wide screens', async ({ page }) => {
   await expect(page.locator(wide ? '#route-search' : '#route-list')).toBeFocused();
 });
 
+test('list is as wide as the field, or wider on narrow screens', async ({ page }) => {
+  await page.locator('#route-btn').click();
+
+  const field = await page.locator('#route-search').boundingBox();
+  const list  = await page.locator('#route-list').boundingBox();
+  expect(list.x).toBeCloseTo(field.x, 0);
+  if (field.width >= 360) expect(list.width).toBeCloseTo(field.width, 0);
+  else expect(list.width).toBeGreaterThan(field.width);
+});
+
 test('search filters routes by name and number', async ({ page }) => {
   await page.locator('#route-btn').click();
   const search = page.locator('#route-search');
