@@ -2,6 +2,7 @@ export const REFRESH_SEC        = 30;
 export const TRACK_COOLDOWN_SEC = 5;
 export const BROWARD_CENTER     = [26.12, -80.15];
 export const BROWARD_ZOOM       = 11;
+export const SEARCH_AUTOFOCUS_MQ = '(min-width: 768px)';
 
 export const STORAGE_KEYS = {
   selection:  'broward_selection_v1',

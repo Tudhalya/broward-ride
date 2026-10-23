@@ -1,4 +1,4 @@
-import { REFRESH_SEC, DIR_LABEL } from './config.js';
+import { REFRESH_SEC } from './config.js';
 import { state } from './state.js';
 import { escapeHTML, minsUntil, fmtTime, fmtHHMM } from './utils.js';
 import { renderMap, renderStops, invalidateMap } from './map.js';
@@ -111,44 +111,6 @@ export function renderAll() {
   renderETA();
   renderSchedule();
   renderNotifyBar();
-}
-
-export function populateRouteSelect() {
-  const sel = document.getElementById('route-select');
-  sel.innerHTML = '';
-
-  const groups = {};
-  state.routes.forEach((r) => {
-    (groups[r.SName] = groups[r.SName] || []).push(r);
-  });
-
-  Object.keys(groups)
-    .sort((a, b) => Number(a) - Number(b))
-    .forEach((num) => {
-      const routes = groups[num];
-      const grp    = document.createElement('optgroup');
-      const lname  = routes[0].LName;
-      grp.label    = `${Number(num)} — ${lname.length > 38 ? lname.slice(0, 36) + '…' : lname}`;
-
-      routes.forEach((r) => {
-        const opt       = document.createElement('option');
-        opt.value       = r.Id;
-        opt.textContent = DIR_LABEL[r.GeoDirection] || r.GeoDirection;
-        opt.selected    = r.Id === state.routeKey;
-        grp.appendChild(opt);
-      });
-      sel.appendChild(grp);
-    });
-
-  if (state.routeKey) sel.value = state.routeKey;
-  updateRouteDisplay();
-}
-
-export function updateRouteDisplay(routeKey = state.routeKey) {
-  const el    = document.getElementById('route-display');
-  const route = state.routes.find((r) => r.Id === routeKey);
-  if (!el || !route) return;
-  el.textContent = `${Number(route.SName)} - ${DIR_LABEL[route.GeoDirection] || route.GeoDirection}`;
 }
 
 export function setTab(tab) {
