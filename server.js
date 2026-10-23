@@ -25,6 +25,8 @@ app.use(helmet({
       connectSrc:     ["'self'"],
       objectSrc:      ["'none'"],
       frameAncestors: ["'none'"],
+      // WebKit/Safari applies this to http://localhost too, which breaks local dev and tests
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null,
     },
   },
 }));

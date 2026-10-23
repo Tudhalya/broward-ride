@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "test": "playwright test",
     "dev": "concurrently \"node --watch server.js\" \"browser-sync start --proxy localhost:8080 --files 'public/**/*,server.js' --no-notify --reload-delay 1000\""
   },
   "dependencies": {
@@ -18,6 +19,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "browser-sync": "^3.0.4",
     "concurrently": "^9.2.5"
   }
