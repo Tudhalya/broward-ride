@@ -7,7 +7,8 @@ function route(num, name, dirs = ['North', 'South']) {
   return dirs.map((dir) => ({ Id: `BCT${sname}_${dir}`, SName: sname, LName: name, GeoDirection: dir }));
 }
 
-// Enough routes that the list scrolls, with 109 (the app's default) not last so its header can reach the top
+// Enough routes after 109 (the app's default) that its header can reach the top even with wide fallback
+// fonts, which make the list taller; otherwise the list hits its scroll limit and the test fails on CI only
 const ROUTES = [
   ...route(1,  'US 1 Local'),
   ...route(2,  'University Dr Local'),
@@ -20,6 +21,7 @@ const ROUTES = [
   ...route(110, '595 Express BB&T Center to Miami/Brickell'),
   ...route(114, '595 Express BB&T Center to Miami Civic Center'),
   ...route(115, '75 Express Miramar P&R to Miami Intermodal Center'),
+  ...Array.from({ length: 8 }, (_, i) => route(200 + i, `Community Shuttle ${String.fromCharCode(65 + i)}`)).flat(),
 ];
 
 test.beforeEach(async ({ page }) => {
