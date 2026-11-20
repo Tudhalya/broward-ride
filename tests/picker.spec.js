@@ -24,6 +24,21 @@ const ROUTES = [
   ...Array.from({ length: 8 }, (_, i) => route(200 + i, `Community Shuttle ${String.fromCharCode(65 + i)}`)).flat(),
 ];
 
+async function chooseRoute(page, search, direction) {
+  await page.locator('#route-btn').click();
+  await page.locator('#route-search').fill(search);
+  await page.getByRole('option', { name: direction }).click();
+}
+
+function recordPositionRequests(page) {
+  const routes = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname === '/api/positions') routes.push(url.searchParams.get('route'));
+  });
+  return routes;
+}
+
 test.beforeEach(async ({ page }) => {
   // Stub the BCT proxy so runs are deterministic and never hit the upstream rate limit
   await page.route('**/api/**', (r) => {
@@ -85,7 +100,7 @@ test('search filters routes by name and number', async ({ page }) => {
   await expect(page.locator('#route-empty')).toBeVisible();
 });
 
-test('arrow keys and Enter pick a route', async ({ page }) => {
+test('arrow keys and Enter track a route automatically', async ({ page }) => {
   await page.locator('#route-btn').click();
   await page.locator('#route-search').fill('pembroke rd');
   await page.keyboard.press('ArrowDown');
@@ -94,16 +109,101 @@ test('arrow keys and Enter pick a route', async ({ page }) => {
   await expect(page.locator('#route-list')).toBeHidden();
   await expect(page.locator('#route-btn')).toHaveText('5 - Westbound');
   await expect(page.locator('#route-btn')).toBeFocused();
+  await expect(page.locator('#status-text')).toHaveText('No buses found on route 5 West');
 });
 
-test('tapping an option picks it and Track applies it', async ({ page }) => {
-  await page.locator('#route-btn').click();
-  await page.locator('#route-search').fill('pembroke rd');
-  await page.getByRole('option', { name: 'Eastbound' }).click();
+test('tapping an option tracks the route automatically', async ({ page }) => {
+  await chooseRoute(page, 'pembroke rd', 'Eastbound');
   await expect(page.locator('#route-btn')).toHaveText('5 - Eastbound');
 
-  await page.locator('#track-btn').click();
   await expect(page.locator('#status-text')).toHaveText('No buses found on route 5 East');
+  await expect(page.locator('#track-btn')).toBeDisabled();
+});
+
+test('cooldown queues only the latest route and shows the loading overlay', async ({ page }) => {
+  await expect(page.locator('#status-text')).toHaveText('No buses found on route 109 North');
+  await page.clock.install();
+  const requests = recordPositionRequests(page);
+
+  await page.locator('#track-btn').click();
+  await expect(page.locator('#status-text')).toHaveText('No buses found on route 109 North');
+  await chooseRoute(page, 'pembroke rd', 'Eastbound');
+  await expect(page.getByRole('status')).toHaveText('Route 5 Eastbound queued');
+  await chooseRoute(page, 'pembroke rd', 'Westbound');
+  await expect(page.getByRole('status')).toHaveText('Route 5 Westbound queued');
+  await expect(page.locator('#status-text')).toHaveText('No buses found on route 109 North');
+  const overlay = page.locator('#loading-overlay');
+  await expect(overlay).toHaveCSS('opacity', '1');
+  await expect(overlay).toHaveCSS('pointer-events', 'all');
+  expect(requests).toEqual(['BCT109_North']);
+
+  await page.clock.runFor(5_000);
+  await expect(page.locator('#status-text')).toHaveText('No buses found on route 5 West');
+  await expect(page.getByRole('status')).toBeEmpty();
+  expect(requests).toEqual(['BCT109_North', 'BCT05_West']);
+});
+
+test('choosing the currently tracked route cancels a queued switch', async ({ page }) => {
+  const status = page.locator('#status-text');
+  const track = page.locator('#track-btn');
+  const queue = page.getByRole('status');
+  await expect(status).toHaveText('No buses found on route 109 North');
+  await page.clock.install();
+  const requests = recordPositionRequests(page);
+
+  await track.click();
+  await chooseRoute(page, 'pembroke rd', 'Eastbound');
+  await expect(queue).toHaveText('Route 5 Eastbound queued');
+
+  await chooseRoute(page, '109', 'Northbound');
+  await expect(queue).toBeEmpty();
+  await expect(track).toBeDisabled();
+
+  await page.clock.runFor(5_000);
+  await expect(track).toBeEnabled();
+  await expect(status).toHaveText('No buses found on route 109 North');
+  await expect(page.locator('#loading-overlay')).not.toHaveClass(/show/);
+  expect(requests).toEqual(['BCT109_North']);
+});
+
+test('loading stays visible while a queued route waits for the active refresh', async ({ page }) => {
+  const status = page.locator('#status-text');
+  const track = page.locator('#track-btn');
+  const queue = page.getByRole('status');
+  const overlay = page.locator('#loading-overlay');
+  await expect(status).toHaveText('No buses found on route 109 North');
+  await page.clock.install();
+  const requests = recordPositionRequests(page);
+
+  const heldRequests = new Map();
+  await page.route('**/api/positions?*', (route) => {
+    const key = new URL(route.request().url()).searchParams.get('route');
+    heldRequests.set(key, route);
+  });
+
+  await track.click();
+  await expect.poll(() => heldRequests.has('BCT109_North')).toBe(true);
+  await expect(overlay).toHaveCSS('pointer-events', 'all');
+  await chooseRoute(page, 'pembroke rd', 'Eastbound');
+  await expect(queue).toHaveText('Route 5 Eastbound queued');
+  await expect(overlay).toHaveCSS('opacity', '1');
+  await expect(overlay).toHaveCSS('pointer-events', 'all');
+
+  await page.clock.runFor(5_000);
+  await expect(track).toBeEnabled();
+  await expect(queue).toHaveText('Route 5 Eastbound queued');
+  expect(requests).toEqual(['BCT109_North']);
+
+  await heldRequests.get('BCT109_North').fulfill({ json: [] });
+  await expect.poll(() => heldRequests.has('BCT05_East')).toBe(true);
+  await expect(queue).toBeEmpty();
+  await expect(overlay).toHaveClass(/show/);
+  await expect(overlay).toHaveCSS('pointer-events', 'all');
+
+  await heldRequests.get('BCT05_East').fulfill({ json: [] });
+  await expect(status).toHaveText('No buses found on route 5 East');
+  await expect(overlay).not.toHaveClass(/show/);
+  expect(requests).toEqual(['BCT109_North', 'BCT05_East']);
 });
 
 const closers = {

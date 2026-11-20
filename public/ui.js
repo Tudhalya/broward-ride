@@ -1,4 +1,4 @@
-import { REFRESH_SEC } from './config.js';
+import { DIR_LABEL, REFRESH_SEC } from './config.js';
 import { state } from './state.js';
 import { escapeHTML, minsUntil, fmtTime, fmtHHMM } from './utils.js';
 import { renderMap, renderStops, invalidateMap } from './map.js';
@@ -6,15 +6,20 @@ import { renderMap, renderStops, invalidateMap } from './map.js';
 export function renderStatus() {
   const el      = document.getElementById('status-text');
   const overlay = document.getElementById('loading-overlay');
+  const queued  = document.getElementById('route-queue-status');
+  const isQueued = state.queuedRouteKey !== null;
+  const queuedRoute = state.routes.find((route) => route.Id === state.queuedRouteKey);
+  const queuedMessage = queuedRoute
+    ? `Route ${Number(queuedRoute.SName)} ${DIR_LABEL[queuedRoute.GeoDirection] || queuedRoute.GeoDirection} queued`
+    : '';
+  if (queued.textContent !== queuedMessage) queued.textContent = queuedMessage;
+  overlay.classList.toggle('show', state.loading || isQueued);
 
   if (state.loading) {
     el.className   = 'loading';
     el.textContent = 'Loading…';
-    overlay.classList.add('show');
     return;
   }
-
-  overlay.classList.remove('show');
 
   if (state.error) {
     el.className   = 'error';

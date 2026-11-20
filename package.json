@@ -12,14 +12,14 @@
     "@google-cloud/storage": "^7.22.0",
     "dotenv": "^16.6.1",
     "express": "^4.22.3",
-    "express-rate-limit": "^8.7.1",
+    "express-rate-limit": "^8.7.5",
     "helmet": "^8.3.0"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.1",
     "browser-sync": "^3.0.4",
     "concurrently": "^9.2.5"
   }

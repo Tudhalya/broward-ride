@@ -1,7 +1,7 @@
 import { TRACK_COOLDOWN_SEC, STORAGE_KEYS } from './config.js';
 import { state } from './state.js';
 import { loadAll, loadRoutes, loadStops } from './api.js';
-import { initMap, clearStopLayer, invalidateMap, locateUser } from './map.js';
+import { initMap, invalidateMap, locateUser } from './map.js';
 import {
   renderAll, renderStatus, renderNotifyBar,
   setTab, openAbout, closeAbout, startCountdown,
@@ -20,22 +20,31 @@ function saveSelection() {
 }
 
 async function refresh() {
+  if (state.loading) return;
+  if (state.queuedRouteKey) {
+    startCountdown(refresh);
+    return;
+  }
+
   state.loading = true;
   renderStatus();
-  try {
-    await Promise.all([loadStops(), loadAll()]);
-  } catch (err) {
-    console.error('Refresh failed:', err);
-    state.error = err.message;
-  } finally {
-    state.loading = false;
+  const results = await Promise.allSettled([loadStops(), loadAll()]);
+  const failure = results.find((result) => result.status === 'rejected');
+  if (failure) {
+    console.error('Refresh failed:', failure.reason);
+    state.error = failure.reason.message;
   }
+  state.loading = false;
+
   renderAll();
-  checkAndNotify();
+  if (!state.queuedRouteKey && pendingStop === null) checkAndNotify();
   startCountdown(refresh);
+  runPendingRefresh();
 }
 
 let trackCooldownId = null;
+let pendingTrack = false;
+let pendingStop = null;
 
 function startTrackCooldown() {
   const btn = document.querySelector('.track-btn');
@@ -49,6 +58,7 @@ function startTrackCooldown() {
       trackCooldownId = null;
       btn.disabled    = false;
       btn.textContent = 'Track';
+      runPendingRefresh();
     } else {
       btn.textContent = `${remaining}s`;
     }
@@ -57,24 +67,34 @@ function startTrackCooldown() {
 
 function track() {
   if (trackCooldownId) return;
+  pendingTrack = true;
+  runPendingRefresh();
+}
 
-  const newKey = document.getElementById('route-btn').dataset.value;
+function runPendingRefresh() {
+  if (state.loading) return;
 
-  if (newKey && newKey !== state.routeKey) {
-    state.mapFitted  = false;
-    state.stopsRoute = null;
+  const tracking = pendingTrack || state.queuedRouteKey;
+  if (tracking && trackCooldownId) return;
+  if (!tracking && pendingStop === null) return;
+
+  if (state.queuedRouteKey) {
+    state.routeKey = state.queuedRouteKey;
+    state.queuedRouteKey = null;
+    state.mapFitted = false;
     state.notified.clear();
-    clearStopLayer();
   }
-  if (newKey) state.routeKey = newKey;
 
-  const newStop = document.getElementById('stop-input').value.trim();
+  const newStop = tracking ? document.getElementById('stop-input').value.trim() : pendingStop;
   if (newStop !== state.stop) state.notified.clear();
   state.stop = newStop;
+  pendingStop = null;
+  pendingTrack = false;
 
-  saveSelection();
-
-  startTrackCooldown();
+  if (tracking) {
+    saveSelection();
+    startTrackCooldown();
+  }
   refresh();
 }
 
@@ -108,11 +128,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initRoutePicker();
 
+  document.addEventListener('broward:route-selected', (e) => {
+    const key = e.detail.key;
+    state.queuedRouteKey = key === state.routeKey ? null : key;
+    runPendingRefresh();
+    renderStatus();
+  });
+
   document.addEventListener('broward:stop-selected', (e) => {
     document.getElementById('stop-input').value = e.detail.code;
-    if (e.detail.code !== state.stop) state.notified.clear();
-    state.stop = e.detail.code;
-    refresh();
+    pendingStop = e.detail.code;
+    runPendingRefresh();
   });
 
   document.getElementById('notify-toggle-btn').addEventListener('click', async () => {

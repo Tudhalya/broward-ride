@@ -181,6 +181,12 @@
       z-index: 1;
     }
 
+    .route-queue-status {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden; clip-path: inset(50%);
+    }
+
     /* ── Loading overlay (sits inside #map) ── */
     .map-overlay {
       position: absolute; inset: 0;
@@ -489,7 +495,8 @@
 
   <!-- Map -->
   <div id="map">
-    <div class="map-overlay" id="loading-overlay">
+    <div class="route-queue-status" id="route-queue-status" role="status"></div>
+    <div class="map-overlay" id="loading-overlay" aria-hidden="true">
       <div class="spinner"></div>
     </div>
   </div>

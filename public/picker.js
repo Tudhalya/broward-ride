@@ -133,8 +133,11 @@ function closePicker(refocus = true) {
 }
 
 function choose(opt) {
-  selectRoute(opt.dataset.value);
+  const key = opt.dataset.value;
+  const changed = key !== document.getElementById('route-btn').dataset.value;
+  selectRoute(key);
   closePicker();
+  if (changed) document.dispatchEvent(new CustomEvent('broward:route-selected', { detail: { key } }));
 }
 
 function onPickerKeydown(e) {

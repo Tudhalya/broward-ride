@@ -1,5 +1,6 @@
 export const state = {
   routeKey:   'BCT109_North',
+  queuedRouteKey: null,
   stop:       '6250',
   routes:     [],
   stops:      [],

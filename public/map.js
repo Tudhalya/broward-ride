@@ -78,10 +78,6 @@ export function invalidateMap() {
   if (map) map.invalidateSize();
 }
 
-export function clearStopLayer() {
-  if (stopLayer) stopLayer.clearLayers();
-}
-
 export function renderMap() {
   busLayer.clearLayers();
   routeLayer.clearLayers();
