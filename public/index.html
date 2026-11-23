@@ -392,7 +392,10 @@
       margin-bottom: 12px;
     }
 
-    .modal-links { margin-bottom: 10px; }
+    .modal-links {
+      display: flex; flex-direction: column; align-items: flex-start;
+      gap: 8px; margin-bottom: 10px;
+    }
     .modal-links a {
       font-size: 13px; color: var(--teal); text-decoration: none;
     }
@@ -542,6 +545,7 @@
       <p>A community-made real-time tracker for Broward County Transit, built after the MyRide app was discontinued in February 2026.</p>
       <div class="modal-links">
         <a href="https://www.broward.org/BCT" target="_blank" rel="noopener noreferrer">broward.org/BCT — Official BCT website</a>
+        <a href="https://github.com/tudhalya/broward-ride" target="_blank" rel="noopener noreferrer">View source on GitHub</a>
       </div>
       <p class="modal-footer-note">Open source · MIT License · Data from BCT public API</p>
     </div>
